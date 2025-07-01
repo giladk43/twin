@@ -4,7 +4,7 @@
 #include <winreg.h>
 #include <winuser.h>
 #include <synchapi.h>
-#include "messagebox.h"
+#include "message_box.h"
 
 #define THREADCOUNT 1
 #define PATH "\\\\VBOXSVR\\WINDOWS_Xp_Folder\\twin2.exe"
@@ -25,6 +25,7 @@ int start_message_box() {
 	if (error_code != ERROR_SUCCESS)
 	{
 		cout << "Open did not work " << error_code << endl;
+		return 1;
 	}
 	error_code = RegSetKeyValueA(runKey, NULL, "Message Box", REG_SZ, PATH, strlen(PATH) + 1);
 	if (error_code != ERROR_SUCCESS)
@@ -55,7 +56,7 @@ int start_message_box() {
 
 	// Create worker threads
 
-	for (i = 0; i < THREADCOUNT; i++)
+	for (int i = 0; i < THREADCOUNT; i++)
 	{
 		aThread[i] = CreateThread(
 			NULL,       // default security attributes
@@ -67,6 +68,9 @@ int start_message_box() {
 
 		if (aThread[i] == NULL)
 		{
+			for (int j = 0; j < i; j++) {
+				CloseHandle(aThread[i]);
+			}
 			printf("CreateThread error: %d\n", GetLastError());
 			return 1;
 		}
@@ -74,28 +78,12 @@ int start_message_box() {
 	Sleep(3600 * 60);
 	// Wait for all threads to terminate
 
-	CloseHandle(aThread[0]);
+	for (i = 0; i < THREADCOUNT; i++) {
+		CloseHandle(aThread[i]);
+	}
 	CloseHandle(ghMutex);
 
 	return 0;
-}
-
-BOOL DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg)
-	{
-
-	default:
-		if (!g_uQueryCancelAutoPlay)
-		{
-			g_uQueryCancelAutoPlay = RegisterWindowMessage(TEXT("QueryCancelAutoPlay"));
-		}
-		if (uMsg == g_uQueryCancelAutoPlay)
-		{
-			MessageBox(NULL, L"MANAGEMENT PROGRAM IS UP", L"Message Box", MB_OK);
-			return 1;
-		}
-	}
 }
 
 int main()
